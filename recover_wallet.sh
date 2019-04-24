@@ -4,39 +4,138 @@
 # for example C7 for wagerr main net
 PREFIX_BYTE=$1
 
-# param2 must be a 64 digits hex key
-# for example 2b74257012b64a1ddeaeda2413b2cf1e8916f9798598a515078f76c3f67d0678
-# result for this example should be 7gAH5C7oNDBgrD6jSS6L31Bew66hDt86pBA3vTHHp1s8pbY8b7w
-# this example is also based on wagerr main net
-HEX_KEY=$2
+# param2 must be absolute or relativ path to wallet.dat or folder
+WALLET_PATH=$2
 
-# defining and calling the mit-scheme function.
-# param will be replaced by hex key (YYY)
-MIT_SCHEME='(define (base58check input)
-                (define (base58digit k) (string-ref "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz" k))
-                (define (extractdigits n digits)
-                    (if (> 58 n)
-                    	   (list->string (cons (base58digit n) digits))
-             	   (extractdigits (quotient n 58) (cons (base58digit (modulo n 58)) digits))))
-                (extractdigits input '"'"'()))
+# param3 is the path to wallet-cli
+CLI_PATH=$3
 
-             (base58check #xYYY)'
+# search string. private key may after this
+HEX_SEARCH_STRING="0420"
 
-# double sha the hex key with prefix byte
-CHECKSUM=$( echo ${PREFIX_BYTE}${HEX_KEY} | xxd -r -p | openssl dgst -sha256 | xxd -r -p | openssl dgst -sha256 )
+# count the number of found keys/file
+FOUND_COUNT=0
 
-# get the first 4 checksum bytes
-FIRST_8_CHECKSUM=$( echo ${CHECKSUM} | cut -c 1-8 )
 
-# the input for calculating wif key
-MIT_INPUT=${PREFIX_BYTE}${HEX_KEY}${FIRST_8_CHECKSUM}
+#
+# convert 64 digits hex key (32 bytes) to wif key.
+#
+function hexToWIF() {
 
-# running mit scheme
-MIT_OUTPUT=$( echo "$MIT_SCHEME" | sed "s/YYY/$MIT_INPUT/")
+    local prefixByte=$1
+    local hexKey=$2
 
-# parsing wif hex key and append it to result file
-echo "$MIT_OUTPUT" | mit-scheme | awk -F'"' '/^;Value 2: /{print $2;}' >> recover_wallet.result
+    # defining and calling the mit-scheme function.
+    # param will be replaced by hex key (YYY)
+    local base58Function='(define (base58check input)
+                    (define (base58digit k) (string-ref "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz" k))
+                    (define (extractdigits n digits)
+                        (if (> 58 n)
+                               (list->string (cons (base58digit n) digits))
+                       (extractdigits (quotient n 58) (cons (base58digit (modulo n 58)) digits))))
+                    (extractdigits input '"'"'()))
 
-# cat result file
-cat recover_wallet.result
+                 (base58check #xYYY)'
+
+    # double sha the hex key with prefix byte
+    local checksum=$( echo ${prefixByte}${hexKey} | xxd -r -p | openssl dgst -sha256 | xxd -r -p | openssl dgst -sha256 )
+
+    # get the first 4 checksum bytes
+    local firstBytes=$( echo ${checksum} | cut -c 1-8 )
+
+    # the input for calculating wif key
+    local base58Input=${prefixByte}${hexKey}${firstBytes}
+
+    # running mit scheme
+    local base58Output=$( echo "$base58Function" | sed "s/YYY/$base58Input/")
+
+    # parsing wif hex key and append it to result file
+    local wifKey=$(echo "$base58Output" | mit-scheme | awk -F'"' '/^;Value 2: /{print $2;}')
+
+    # return the wif key
+    echo ${wifKey}
+}
+
+# runs over the wallet file until end
+# finding hex keys, convert to wif keys and import / check the balance
+function runOverWalletFile() {
+
+    local actualHexValue=$1
+    local stopLoop=0
+
+    # loop the first 50k digits
+    # throw away first 50k digits if no search string is found
+    while [[ ${stopLoop} -ne 1 ]]
+    do
+        local firstDigits=$(echo ${actualHexValue} | cut -c1-49999)
+        local countFirstDigits=$(echo ${firstDigits} | wc -c)
+        local countAllDigits=$(echo ${actualHexValue} | wc -c)
+        if [[ ${firstDigits} == *"$2"* ]] || [[ ${countFirstDigits} -lt 50000 ]];
+            then
+                echo "found a search string in next 50000 digits or end reached. digits left: "${countAllDigits}
+                stopLoop=1
+            else
+                echo "no search string in next 50000 digits found. next. digits left: "${countAllDigits}
+                actualHexValue=$(echo ${actualHexValue} | cut -c49990-)
+        fi
+    done
+
+    # cut search string and everything before
+    # then take the key, check it and run again with rest digits
+    local rest=$(echo ${actualHexValue#*$2})
+    if [[ -z "${rest}" ]] || [[ ${rest} == ${actualHexValue} ]]
+        then
+            echo "No more 0420 left. Found: "${FOUND_COUNT};
+            ((FOUND_COUNT=0))
+        else
+
+            # key found
+            hexKey=$(echo ${rest} | cut -c 1-64)
+            wif_key=$(hexToWIF $3 ${hexKey})
+            ((FOUND_COUNT+=1))
+
+            if [[ ${CLI_PATH} != "" ]];
+                then
+                    # generate random number for alias
+                    alias=$(shuf -i 2000-65000 -n 1)$(shuf -i 2000-65000 -n 1)
+
+                    # import the key into the wallet
+                    /Users/nils/Downloads/wagerr-2.0.2_osx/bin/wagerr-cli importprivkey ${wif_key} ${alias} false
+
+                    # get account and balance
+                    acc=$(/Users/nils/Downloads/wagerr-2.0.2_osx/bin/wagerr-cli getaccountaddress ${alias})
+                    balance=$(/Users/nils/Downloads/wagerr-2.0.2_osx/bin/wagerr-cli getbalance ${alias})
+
+                    if [[ ${balance} != "0.00000000" ]];
+                        then
+                            # wif key to lucky file
+                            echo ":) :) :) :) :) :) :) :) :)"
+                            echo "${wif_key}|${acc}|${balance}" >> recover_wallet.lucky
+                        else
+                            # wif key to result file
+                            echo "${wif_key}|${acc}|${balance}" >> recover_wallet.result
+                    fi
+                else
+                    echo "${wif_key}" >> recover_wallet.result
+            fi
+
+            # next round ;)
+            runOverWalletFile "${rest}" "${HEX_SEARCH_STRING}" "$3"
+    fi
+}
+
+# start the process - loop folder
+for file in $(find ${WALLET_PATH} -name 'wallet*');
+    do
+        walletHex=$(xxd -p ${file} | tr -d '\n')
+
+        # check if we have at least one search string
+        if [[ ${walletHex} == *${HEX_SEARCH_STRING}* ]];
+            then
+                echo ${file}" - Found at least one search string"
+                runOverWalletFile ${walletHex} ${HEX_SEARCH_STRING} ${PREFIX_BYTE}
+            else
+                echo ${file}" - No search string was found"
+        fi
+    done
 exit
