@@ -72,10 +72,10 @@ function runOverWalletFile() {
         local countAllDigits=$(echo ${actualHexValue} | wc -c)
         if [[ ${firstDigits} == *"$2"* ]] || [[ ${countFirstDigits} -lt 50000 ]];
             then
-                echo "found a search string in next 50000 digits or end reached. digits left: "${countAllDigits}
+                echo "the next 50000 lines are dope :) "${countAllDigits}
                 stopLoop=1
             else
-                echo "no search string in next 50000 digits found. next. digits left: "${countAllDigits}
+                echo "no dope in the next 50 lines.. "${countAllDigits}
                 actualHexValue=$(echo ${actualHexValue} | cut -c49990-)
         fi
     done
@@ -85,7 +85,7 @@ function runOverWalletFile() {
     local rest=$(echo ${actualHexValue#*$2})
     if [[ -z "${rest}" ]] || [[ ${rest} == ${actualHexValue} ]]
         then
-            echo "No more 0420 left. Found: "${FOUND_COUNT};
+            echo "No more dope left. Found: "${FOUND_COUNT};
             ((FOUND_COUNT=0))
         else
             # key found
@@ -114,7 +114,7 @@ function runOverWalletFile() {
 
                             # check balance at wagerr explorer
                             # experimental for wagerr. dont spam explorer site
-                            #balanceAPI=$(curl -s https://explorer.wagerr.com/api/address/${address} | tr -dc '0-9')
+                            balanceAPI=$(curl -s https://explorer.wagerr.com/api/address/${address} | tr -dc '0-9')
                             balanceAPI="0000"
 
                             if [[ ${balanceAPI} != "0000" ]];
