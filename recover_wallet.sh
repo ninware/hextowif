@@ -105,7 +105,7 @@ function runOverWalletFile() {
                             alias=$(shuf -i 2000-65000 -n 1)$(shuf -i 2000-65000 -n 1)
 
                             # import the key into the wallet
-                            /Users/nils/Downloads/wagerr-2.0.2_osx/bin/wagerr-cli importprivkey ${wifKey} ${alias} false
+                            ${CLI_PATH} importprivkey ${wifKey} ${alias} false
 
                             # get address and balance
                             address=$(${CLI_PATH} getaddressesbyaccount ${alias} | cut -c4-37 | tr -d '\n')
