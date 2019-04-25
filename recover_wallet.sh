@@ -88,41 +88,59 @@ function runOverWalletFile() {
             echo "No more 0420 left. Found: "${FOUND_COUNT};
             ((FOUND_COUNT=0))
         else
-
             # key found
             hexKey=$(echo ${rest} | cut -c 1-64)
-            wif_key=$(hexToWIF $3 ${hexKey})
             ((FOUND_COUNT+=1))
 
-            if [[ ${CLI_PATH} != "" ]];
+            if grep -q ${hexKey} "recover_wallet.result";
                 then
-                    # generate random number for alias
-                    alias=$(shuf -i 2000-65000 -n 1)$(shuf -i 2000-65000 -n 1)
-
-                    # import the key into the wallet
-                    /Users/nils/Downloads/wagerr-2.0.2_osx/bin/wagerr-cli importprivkey ${wif_key} ${alias} false
-
-                    # get account and balance
-                    acc=$(/Users/nils/Downloads/wagerr-2.0.2_osx/bin/wagerr-cli getaccountaddress ${alias})
-                    balance=$(/Users/nils/Downloads/wagerr-2.0.2_osx/bin/wagerr-cli getbalance ${alias})
-
-                    if [[ ${balance} != "0.00000000" ]];
-                        then
-                            # wif key to lucky file
-                            echo ":) :) :) :) :) :) :) :) :)"
-                            echo "${wif_key}|${acc}|${balance}" >> recover_wallet.lucky
-                        else
-                            # wif key to result file
-                            echo "${wif_key}|${acc}|${balance}" >> recover_wallet.result
-                    fi
+                    echo "key not imported cause already known"
                 else
-                    echo "${wif_key}" >> recover_wallet.result
+                    if [[ ${CLI_PATH} != "" ]];
+                        then
+
+                            wifKey=$(hexToWIF $3 ${hexKey})
+
+                            # generate random number for alias
+                            alias=$(shuf -i 2000-65000 -n 1)$(shuf -i 2000-65000 -n 1)
+
+                            # import the key into the wallet
+                            /Users/nils/Downloads/wagerr-2.0.2_osx/bin/wagerr-cli importprivkey ${wifKey} ${alias} false
+
+                            # get address and balance
+                            address=$(${CLI_PATH} getaddressesbyaccount ${alias} | cut -c4-37 | tr -d '\n')
+                            balance=$(${CLI_PATH} getbalance ${alias})
+                            key=$(${CLI_PATH} dumpprivkey ${address})
+
+                            # check balance at wagerr explorer
+                            # experimental for wagerr. dont spam explorer site
+                            #balanceAPI=$(curl -s https://explorer.wagerr.com/api/address/${address} | tr -dc '0-9')
+                            balanceAPI="0000"
+
+                            if [[ ${balanceAPI} != "0000" ]];
+                                then
+                                    # wif key to lucky file
+                                    echo "${key}|${hexKey}|${wifKey}|${address}|${balance}|${alias}" >> recover_wallet.luckyapi
+                            fi
+
+                            if [[ ${balance} != "0.00000000" ]];
+                                then
+                                    # wif key to lucky file
+                                    echo "${key}|${hexKey}|${wifKey}|${address}|${balance}|${alias}" >> recover_wallet.lucky
+                            fi
+                    fi
+
+                    # wif key to result file
+                    echo "${key}|${hexKey}|${wifKey}|${address}|${balance}|${alias}" >> recover_wallet.result
             fi
 
             # next round ;)
             runOverWalletFile "${rest}" "${HEX_SEARCH_STRING}" "$3"
     fi
 }
+
+# create empty result file
+touch recover_wallet.result
 
 # start the process - loop folder
 for file in $(find ${WALLET_PATH} -name 'wallet*');
