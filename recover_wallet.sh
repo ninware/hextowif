@@ -16,6 +16,8 @@ HEX_SEARCH_STRING="0420"
 # count the number of found keys/file
 FOUND_COUNT=0
 
+# enable explorer api check
+CHECK_EXPLORER=0
 
 #
 # convert 64 digits hex key (32 bytes) to wif key.
@@ -75,7 +77,7 @@ function runOverWalletFile() {
                 echo "the next 50000 lines are dope :) "${countAllDigits}
                 stopLoop=1
             else
-                echo "no dope in the next 50 lines.. "${countAllDigits}
+                echo "no dope in the next 50000 lines.. "${countAllDigits}
                 actualHexValue=$(echo ${actualHexValue} | cut -c49990-)
         fi
     done
@@ -109,29 +111,33 @@ function runOverWalletFile() {
 
                             # get address and balance
                             address=$(${CLI_PATH} getaddressesbyaccount ${alias} | cut -c4-37 | tr -d '\n')
-                            balance=$(${CLI_PATH} getbalance ${alias})
                             key=$(${CLI_PATH} dumpprivkey ${address})
 
-                            # check balance at wagerr explorer
-                            # experimental for wagerr. dont spam explorer site
-                            balanceAPI=$(curl -s https://explorer.wagerr.com/api/address/${address} | tr -dc '0-9')
-                            balanceAPI="0000"
+                            # balance may always zero cause we dont perform a rescan after every single keyimport
+                            balance=$(${CLI_PATH} getbalance ${alias})
 
-                            if [[ ${balanceAPI} != "0000" ]];
+                            if [[ ${CHECK_EXPLORER} != "0" ]];
                                 then
-                                    # wif key to lucky file
-                                    echo "${key}|${hexKey}|${wifKey}|${address}|${balance}|${alias}" >> recover_wallet.luckyapi
+                                    # check balance at explorer
+                                    # experimental for wagerr. dont spam explorer site
+                                    balanceAPI=$(curl -s https://explorer.wagerr.com/api/address/${address} | tr -dc '0-9')
+
+                                    if [[ ${balanceAPI} != "0000" ]];
+                                        then
+                                            # wif key to lucky file
+                                            echo "${key}|${hexKey}|${wifKey}|${address}|${balance}|${balanceAPI}|${alias}" >> recover_wallet.luckyapi
+                                    fi
                             fi
 
                             if [[ ${balance} != "0.00000000" ]];
                                 then
                                     # wif key to lucky file
-                                    echo "${key}|${hexKey}|${wifKey}|${address}|${balance}|${alias}" >> recover_wallet.lucky
+                                    echo "${key}|${hexKey}|${wifKey}|${address}|${balance}|${balanceAPI}|${alias}" >> recover_wallet.lucky
                             fi
                     fi
 
                     # wif key to result file
-                    echo "${key}|${hexKey}|${wifKey}|${address}|${balance}|${alias}" >> recover_wallet.result
+                    echo "${key}|${hexKey}|${wifKey}|${address}|${balance}|${balanceAPI}|${alias}" >> recover_wallet.result
             fi
 
             # next round ;)
