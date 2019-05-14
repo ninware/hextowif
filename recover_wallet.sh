@@ -10,14 +10,17 @@ WALLET_PATH=$2
 # param3 is the path to wallet-cli
 CLI_PATH=$3
 
-# search string. private key may after this
-HEX_SEARCH_STRING="0420"
-
-# count the number of found keys/file
+# count the number of found keys/file - do not edit or count will be wrong
 FOUND_COUNT=0
+
+# search string. private key may found after this
+HEX_SEARCH_STRING="0420"
 
 # enable explorer api check
 CHECK_EXPLORER=0
+
+# '01' for getting uncompressed keys and '' for getting compressed keys
+COMPRESSING='01'
 
 #
 # convert 64 digits hex key (32 bytes) to wif key.
@@ -40,13 +43,13 @@ function hexToWIF() {
                  (base58check #xYYY)'
 
     # double sha the hex key with prefix byte
-    local checksum=$( echo ${prefixByte}${hexKey} | xxd -r -p | openssl dgst -sha256 | xxd -r -p | openssl dgst -sha256 )
+    local checksum=$( echo ${prefixByte}${hexKey}${COMPRESSING} | xxd -r -p | openssl dgst -sha256 | xxd -r -p | openssl dgst -sha256 )
 
     # get the first 4 checksum bytes
     local firstBytes=$( echo ${checksum} | cut -c 1-8 )
 
     # the input for calculating wif key
-    local base58Input=${prefixByte}${hexKey}${firstBytes}
+    local base58Input=${prefixByte}${hexKey}${COMPRESSING}${firstBytes}
 
     # running mit scheme
     local base58Output=$( echo "$base58Function" | sed "s/YYY/$base58Input/")
@@ -113,9 +116,6 @@ function runOverWalletFile() {
                             address=$(${CLI_PATH} getaddressesbyaccount ${alias} | cut -c4-37 | tr -d '\n')
                             key=$(${CLI_PATH} dumpprivkey ${address})
 
-                            # balance may always zero cause we dont perform a rescan after every single keyimport
-                            balance=$(${CLI_PATH} getbalance ${alias})
-
                             if [[ ${CHECK_EXPLORER} != "0" ]];
                                 then
                                     # check balance at explorer
@@ -127,12 +127,6 @@ function runOverWalletFile() {
                                             # wif key to lucky file
                                             echo "${key}|${hexKey}|${wifKey}|${address}|${balance}|${balanceAPI}|${alias}" >> recover_wallet.luckyapi
                                     fi
-                            fi
-
-                            if [[ ${balance} != "0.00000000" ]];
-                                then
-                                    # wif key to lucky file
-                                    echo "${key}|${hexKey}|${wifKey}|${address}|${balance}|${balanceAPI}|${alias}" >> recover_wallet.lucky
                             fi
                     fi
 
@@ -149,7 +143,7 @@ function runOverWalletFile() {
 touch recover_wallet.result
 
 # start the process - loop folder
-for file in $(find ${WALLET_PATH} -name 'wallet*');
+for file in $(find ${WALLET_PATH} -name '*.dat');
     do
         walletHex=$(xxd -p ${file} | tr -d '\n')
 

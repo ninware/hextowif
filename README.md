@@ -1,6 +1,6 @@
 # ########################################################
 # --------------------------------------------------------
-# script will scan folder for wallet files
+# script will scan folder for wallet files (*.dat)
 # it will find 64 digits hex keys and converts them to wif format
 # possibility of automatically wallet import
 # this script is only tested for wagerr coin 2.0.2
@@ -35,6 +35,14 @@ example for wagerr main net
 sh recover_wallet.sh C7 /path/to/check
 
 sh recover_wallet.sh C7 /path/to/check /path/to/wagerr-cli
+
+
+# AUTOMATICALLY VALUE CHECK
+you have the possibility to check wagerr keys for value on wagerr explorer.
+to do this, change variable "CHECK_EXPLORER" to 1 in batch file.
+care: may you spam the explorer website if you set this to 1.
+
+better way: set this value to 0 and start a rescan in your GUI client.
 
 
 # DISCLAIMER
