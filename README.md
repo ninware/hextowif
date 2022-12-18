@@ -21,7 +21,7 @@ Do not run on a dirty setup / infected system.
 If you just want to extract the keys, use a fresh offline VM.
 
 
-# Parameters
+## Parameters
 1 : prefix byte - for example C7 for wagerr main net (required)
 
 2 : path to scan (required)
@@ -29,7 +29,7 @@ If you just want to extract the keys, use a fresh offline VM.
 3 : path to cli (optional)
 
 
-# Usage
+## Usage
 
 Recover the private Keys
 
@@ -41,7 +41,7 @@ Recover the private Keys and import them into the current wallet.
 sh recover_wallet.sh C7 /path/to/check /path/to/wagerr-cli
 
 
-# Automatic Value Check on Explorer Site
+## Automatic Value Check on Explorer Site
 Yyou have the possibility to check wagerr keys for value on wagerr explorer.
 To do this, change variable "CHECK_EXPLORER" to 1 in batch file.
 
@@ -53,7 +53,7 @@ Better way: set this value to 0 and start a rescan in your GUI client.
 To try another Coin than wagerr, please change Explorer URL manualy in sh-File.
 
 
-# Disclaimer
+## Disclaimer
 this script is based on wagerr wiki site
 
 https://github.com/wagerr/wagerr/wiki/How-to-create-a-key-from-openssl
