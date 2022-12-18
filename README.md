@@ -1,51 +1,59 @@
-# ########################################################
-# --------------------------------------------------------
-# script will scan folder for wallet files (*.dat)
-# it will find 64 digits hex keys and converts them to wif format
-# possibility of automatically wallet import
-# this script is only tested for wagerr coin 2.0.2
-# --------------------------------------------------------
-# ########################################################
+# qt wallet recovery
+
+## Introduction
+This Script will scan a specific folder for wallet files (*.dat).
+It will find 64 digits hex keys and converts them to wif format.
+You have the possibility to do an automatic value check and an automatic wallet import.
 
 
-# PREREQUISITE
-you will need to have openssl and mit-scheme installed
+This script is only tested for **wagerr** coin 2.0.2.
 
-for automatically import function you need your wallet/daemon started
+
+## Prerequisite for automatic wallet import
+You will need to have openssl and mit-scheme installed.
+For automatically import function you need your wallet/daemon started
 and the cli installed
 
 
-# !! CARE !!
-determined wif keys will be logged in recover_wallet.result file.
+##  !! CARE !!
+Determined wif keys will be logged in recover_wallet.result file.
+Do not run on a dirty setup / infected system.
+If you just want to extract the keys, use a fresh offline VM.
 
-do not run on a dirty setup / infected system
 
+# Parameters
+1 : prefix byte - for example C7 for wagerr main net (required)
 
-# PARAMETERS
-1 : prefix byte - for example C7 for wagerr main net
-
-2 : 64 digits hex key
+2 : path to scan (required)
 
 3 : path to cli (optional)
 
 
-# USAGE
-example for wagerr main net
+# Usage
+
+Recover the private Keys
 
 sh recover_wallet.sh C7 /path/to/check
+
+
+Recover the private Keys and import them into the current wallet.
 
 sh recover_wallet.sh C7 /path/to/check /path/to/wagerr-cli
 
 
-# AUTOMATICALLY VALUE CHECK
-you have the possibility to check wagerr keys for value on wagerr explorer.
-to do this, change variable "CHECK_EXPLORER" to 1 in batch file.
-care: may you spam the explorer website if you set this to 1.
+# Automatic Value Check on Explorer Site
+Yyou have the possibility to check wagerr keys for value on wagerr explorer.
+To do this, change variable "CHECK_EXPLORER" to 1 in batch file.
 
-better way: set this value to 0 and start a rescan in your GUI client.
+Care:
+
+May you spam the explorer website if you set this to 1.
+Better way: set this value to 0 and start a rescan in your GUI client.
+
+To try another Coin than wagerr, please change Explorer URL manualy in sh-File.
 
 
-# DISCLAIMER
+# Disclaimer
 this script is based on wagerr wiki site
 
 https://github.com/wagerr/wagerr/wiki/How-to-create-a-key-from-openssl
